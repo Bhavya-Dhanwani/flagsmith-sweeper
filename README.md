@@ -52,7 +52,7 @@ Runs the scan and fix, then opens a PR with the report. Your Flagsmith must be r
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: <owner>/flagsmith-sweeper@main
+- uses: Bhavya-Dhanwani/flagsmith-sweeper@main
   with:
     flagsmith-url: ${{ vars.FLAGSMITH_URL }}
     token: ${{ secrets.FLAGSMITH_TOKEN }}
