@@ -1,0 +1,19 @@
+# Example: run the sweeper manually, or uncomment the schedule for weekly PRs.
+# Your Flagsmith must be reachable from GitHub's runners (cloud, or a public/self-hosted URL).
+name: Flag sweep
+on:
+  workflow_dispatch:
+  # schedule: [{ cron: "0 6 * * 1" }]
+permissions: { contents: write, pull-requests: write }
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          flagsmith-url: ${{ vars.FLAGSMITH_URL }}
+          token: ${{ secrets.FLAGSMITH_TOKEN }}
+          project-id: ${{ vars.FLAGSMITH_PROJECT_ID }}
+          environment-key: ${{ vars.FLAGSMITH_ENV_KEY }}
+          path: sample-app

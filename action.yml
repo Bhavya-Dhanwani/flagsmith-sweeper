@@ -1,0 +1,36 @@
+name: Flagsmith Sweeper
+description: Find stale Flagsmith flags in your code and open a PR that removes them.
+branding: { icon: trash-2, color: green }
+inputs:
+  flagsmith-url:   { description: "Base URL of your Flagsmith (self-hosted or cloud)", required: true }
+  token:           { description: "Flagsmith admin API token", required: true }
+  project-id:      { description: "Flagsmith project id", required: true }
+  environment-key: { description: "Flagsmith environment API key to judge on/off state by", required: true }
+  path:            { description: "Directory to scan", default: "." }
+  github-token:    { description: "Token used to open the PR", default: "${{ github.token }}" }
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with: { node-version: 22 }
+    - run: npm ci --prefix "$GITHUB_ACTION_PATH"
+      shell: bash
+    - id: sweep
+      shell: bash
+      env:
+        FLAGSMITH_URL: ${{ inputs.flagsmith-url }}
+        FLAGSMITH_TOKEN: ${{ inputs.token }}
+        FLAGSMITH_PROJECT_ID: ${{ inputs.project-id }}
+        FLAGSMITH_ENV_KEY: ${{ inputs.environment-key }}
+      run: |
+        npx --prefix "$GITHUB_ACTION_PATH" tsx "$GITHUB_ACTION_PATH/src/cli.ts" scan "${{ inputs.path }}" | tee /tmp/report.txt
+        npx --prefix "$GITHUB_ACTION_PATH" tsx "$GITHUB_ACTION_PATH/src/cli.ts" fix "${{ inputs.path }}" | tee /tmp/fix.txt
+        rm -f sweeper-report.html
+        { echo 'body<<EOF'; echo 'Automated cleanup of flags that are fully on/off in Flagsmith.'; echo; echo '```'; cat /tmp/report.txt; echo '```'; echo 'Ghost and unused flags are listed above but need a human decision.'; echo EOF; } >> "$GITHUB_OUTPUT"
+    - uses: peter-evans/create-pull-request@v7
+      with:
+        token: ${{ inputs.github-token }}
+        branch: flagsmith-sweeper/cleanup
+        title: "🧹 Remove stale feature flags"
+        commit-message: "chore: remove stale feature flags"
+        body: ${{ steps.sweep.outputs.body }}
